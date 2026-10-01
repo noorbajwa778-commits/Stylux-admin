@@ -1,31 +1,48 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import Header from "../components/header.jsx";
 import StatusBadge from "../components/statusbadge.jsx";
-import { orders } from "../data/orders.js";
+import {
+  getClientName,
+  getSalonName,
+  getServiceName,
+} from "../redux/redux/Slices/AdminDataSlice.js";
 import { Search } from "lucide-react";
 
-const statusFilters = ["all", "pending", "approved", "completed", "cancelled"];
+const statusFilters = ["all", "upcoming", "completed", "cancelled"];
 
-export default function Orders() {
+export default function Appointments() {
+  const appointments = useSelector((state) => state.adminData.appointments);
+  const clients = useSelector((state) => state.adminData.clients);
+  const services = useSelector((state) => state.adminData.services);
+  const salons = useSelector((state) => state.salons.salons);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredOrders = orders.filter((order) => {
+  const rows = appointments.map((a) => ({
+    ...a,
+    clientName: getClientName(clients, a.client_id),
+    salonName: getSalonName(salons, a.salon_id),
+    serviceName: getServiceName(services, a.service_id),
+  }));
+
+  const filteredAppointments = rows.filter((r) => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch =
-      order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.salonName.toLowerCase().includes(searchTerm.toLowerCase());
+      r.clientName.toLowerCase().includes(term) ||
+      r.salonName.toLowerCase().includes(term);
     const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
+      statusFilter === "all" || (r.status || "").toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   return (
     <div>
-      <Header title="Orders" subtitle="View and manage all bookings" />
+      <Header title="Appointments" subtitle="View all bookings across salons" />
 
       <div className="px-8 pb-8">
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          {/* Search + filter bar */}
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div className="relative w-72">
               <Search
@@ -58,7 +75,6 @@ export default function Orders() {
             </div>
           </div>
 
-          {/* Table */}
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-400 border-b border-gray-100">
@@ -66,33 +82,33 @@ export default function Orders() {
                 <th className="pb-3 font-medium">Salon</th>
                 <th className="pb-3 font-medium">Service</th>
                 <th className="pb-3 font-medium">Date</th>
-                <th className="pb-3 font-medium">Price</th>
+                <th className="pb-3 font-medium">Time</th>
+                <th className="pb-3 font-medium">Amount</th>
                 <th className="pb-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="border-b border-gray-50">
-                  <td className="py-3 font-medium text-gray-800">
-                    {order.clientName}
-                  </td>
-                  <td className="py-3 text-gray-600">{order.salonName}</td>
-                  <td className="py-3 text-gray-600">{order.service}</td>
-                  <td className="py-3 text-gray-600">{order.date}</td>
+              {filteredAppointments.map((r) => (
+                <tr key={r.id} className="border-b border-gray-50">
+                  <td className="py-3 font-medium text-gray-800">{r.clientName}</td>
+                  <td className="py-3 text-gray-600">{r.salonName}</td>
+                  <td className="py-3 text-gray-600">{r.serviceName}</td>
+                  <td className="py-3 text-gray-600">{r.date}</td>
+                  <td className="py-3 text-gray-600">{r.time}</td>
                   <td className="py-3 text-gray-600">
-                    Rs {order.price.toLocaleString()}
+                    Rs {Number(r.amount || 0).toLocaleString()}
                   </td>
                   <td className="py-3">
-                    <StatusBadge status={order.status} />
+                    <StatusBadge status={r.status} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {filteredOrders.length === 0 && (
+          {filteredAppointments.length === 0 && (
             <p className="text-center text-gray-400 py-8 text-sm">
-              No orders match your search.
+              No appointments found.
             </p>
           )}
         </div>

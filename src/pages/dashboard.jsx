@@ -1,17 +1,22 @@
+import { useSelector } from "react-redux";
 import Header from "../components/header.jsx";
 import StatCard from "../components/statcard.jsx";
-import RecentOrders from "../components/recentorders.jsx";
+import RecentAppointments from "../components/recentappointments.jsx";
 import PendingApprovals from "../components/pendingapprovals.jsx";
-import OrderStatusSummary from "../components/orderstatus.jsx";
-import { ShoppingBag, Users, CheckCircle, DollarSign } from "lucide-react";
-import { orders } from "../data/orders.js";
-import { users } from "../data/users.js";
+import OrderStatusSummary from "../components/appointmentstatus.jsx";
+import { CalendarCheck, Users, CheckCircle, DollarSign } from "lucide-react";
 
 export default function Dashboard() {
-  const totalOrders = orders.length;
-  const totalUsers = users.length;
-  const completedOrders = orders.filter((o) => o.status === "completed").length;
-  const totalRevenue = orders.reduce((sum, o) => sum + o.price, 0);
+  const appointments = useSelector((state) => state.adminData.appointments);
+  const clients = useSelector((state) => state.adminData.clients);
+
+  const completed = appointments.filter(
+    (a) => (a.status || "").toLowerCase() === "completed"
+  );
+  const totalRevenue = completed.reduce(
+    (sum, a) => sum + Number(a.amount || 0),
+    0
+  );
 
   return (
     <div>
@@ -23,37 +28,33 @@ export default function Dashboard() {
       <div className="px-8 pb-8 space-y-6">
         <div className="flex flex-wrap gap-5">
           <StatCard
-            icon={ShoppingBag}
+            icon={CalendarCheck}
             iconBg="bg-gradient-to-br from-pink to-purple"
-            label="Total Orders"
-            value={totalOrders}
-            change="+12%"
+            label="Total Appointments"
+            value={appointments.length}
           />
           <StatCard
             icon={Users}
             iconBg="bg-gradient-to-br from-purple to-pink"
             label="Total Users"
-            value={totalUsers}
-            change="+8%"
+            value={clients.length}
           />
           <StatCard
             icon={CheckCircle}
             iconBg="bg-gradient-to-br from-pink to-purple"
             label="Completed"
-            value={completedOrders}
-            change="+5%"
+            value={completed.length}
           />
           <StatCard
             icon={DollarSign}
             iconBg="bg-gradient-to-br from-purple to-pink"
             label="Revenue"
             value={`Rs ${totalRevenue.toLocaleString()}`}
-            change="+20%"
           />
         </div>
 
         <div className="flex flex-col md:flex-row gap-6">
-          <RecentOrders />
+          <RecentAppointments />
           <div className="flex flex-col gap-6 w-full md:w-80">
             <PendingApprovals />
             <OrderStatusSummary />

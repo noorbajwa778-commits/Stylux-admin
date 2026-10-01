@@ -1,20 +1,28 @@
 import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabase.js";
+import {
+  setUser,
+  setName,
+  setRole,
+} from "../redux/redux/Slices/HomeDataSlice.js";
 import { Search, Bell, Settings, LogOut } from "lucide-react";
-
-const sampleNotifications = [
-  { id: 1, text: "New order from Ayesha Tariq", time: "5 min ago" },
-  { id: 2, text: "Sania Hassan Makeover awaiting approval", time: "1 hour ago" },
-  { id: 3, text: "New 1-star review on Jugnus", time: "3 hours ago" },
-];
 
 export default function Header({ title, subtitle }) {
   const navigate = useNavigate();
-  const [showNotifications, setShowNotifications] = useState(false);
+  const dispatch = useDispatch();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("stylux-admin-logged-in");
+  const userName = useSelector((state) => state.home.name);
+  const notifications = useSelector((state) => state.notifications.items);
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    dispatch(setUser({}));
+    dispatch(setName(""));
+    dispatch(setRole(""));
     navigate("/");
   };
 
@@ -26,7 +34,6 @@ export default function Header({ title, subtitle }) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Search bar */}
         <div className="relative hidden sm:block">
           <Search
             size={16}
@@ -39,59 +46,34 @@ export default function Header({ title, subtitle }) {
           />
         </div>
 
-        {/* Notification bell */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowNotifications(!showNotifications);
-              setShowProfileMenu(false);
-            }}
-            className="relative w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center"
-          >
-            <Bell size={18} className="text-gray-500" />
+        <button
+          onClick={() => navigate("/notifications")}
+          className="relative w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center"
+        >
+          <Bell size={18} className="text-gray-500" />
+          {unreadCount > 0 && (
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500"></span>
-          </button>
-
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-lg border border-gray-100 p-3 z-50">
-              <p className="text-sm font-semibold text-gray-800 px-2 pb-2">
-                Notifications
-              </p>
-              {sampleNotifications.map((note) => (
-                <div
-                  key={note.id}
-                  className="px-2 py-2 rounded-xl hover:bg-gray-50"
-                >
-                  <p className="text-sm text-gray-700">{note.text}</p>
-                  <p className="text-xs text-gray-400">{note.time}</p>
-                </div>
-              ))}
-            </div>
           )}
-        </div>
+        </button>
 
-        {/* Admin avatar */}
         <div className="relative">
           <button
-            onClick={() => {
-              setShowProfileMenu(!showProfileMenu);
-              setShowNotifications(false);
-            }}
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
             className="w-10 h-10 rounded-full bg-gradient-to-br from-pink to-purple flex items-center justify-center text-white text-sm font-semibold"
           >
-            A
+            {(userName || "A").charAt(0).toUpperCase()}
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-lg border border-gray-100 p-2 z-50">
-              <p className="text-sm font-medium text-gray-800 px-3 py-2">
-                Admin
-              </p>
-              <p className="text-xs text-gray-400 px-3 pb-2 -mt-1">
-                admin@stylux.com
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-lg border border-gray-100 p-2 z-50">
+              <p className="text-sm font-medium text-gray-800 px-3 py-2 truncate">
+                {userName || "Admin"}
               </p>
               <button
-                onClick={() => navigate("/settings")}
+                onClick={() => {
+                  navigate("/settings");
+                  setShowProfileMenu(false);
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
               >
                 <Settings size={15} />

@@ -1,20 +1,27 @@
-
 import { useState, useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { supabase } from "../supabase.js";
+import { setName } from "../redux/redux/Slices/HomeDataSlice.js";
 import Header from "../components/header.jsx";
 import { User } from "lucide-react";
 
 export default function Settings() {
-  const [name, setName] = useState("Admin");
-  const [email, setEmail] = useState("admin@stylux.com");
-  const [currentPassword, setCurrentPassword] = useState("");
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.home.user);
+  const storedName = useSelector((state) => state.home.name);
+
+  const [nameInput, setNameInput] = useState(storedName || "");
+  const [profileMsg, setProfileMsg] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMsg, setPasswordMsg] = useState({ type: "", text: "" });
   const [avatarUrl, setAvatarUrl] = useState(null);
   const fileInputRef = useRef(null);
 
   const [notifications, setNotifications] = useState({
+    newSalonRequests: true,
     newOrders: true,
-    newSalons: true,
-    reviews: false,
+    newReviews: false,
   });
 
   const toggleNotification = (key) => {
@@ -24,8 +31,41 @@ export default function Settings() {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setAvatarUrl(previewUrl);
+      setAvatarUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    dispatch(setName(nameInput));
+    const { error } = await supabase
+      .from("admin")
+      .update({ name: nameInput })
+      .eq("id", user.id);
+    if (error) {
+      console.log("Admin profile update error:", error);
+    }
+    setProfileMsg("Profile saved.");
+  };
+
+  const handleUpdatePassword = async () => {
+    if (newPassword.length < 6) {
+      setPasswordMsg({
+        type: "error",
+        text: "Password must be at least 6 characters.",
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: "error", text: "Passwords do not match." });
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      setPasswordMsg({ type: "error", text: error.message });
+    } else {
+      setPasswordMsg({ type: "success", text: "Password updated." });
+      setNewPassword("");
+      setConfirmPassword("");
     }
   };
 
@@ -34,7 +74,6 @@ export default function Settings() {
       <Header title="Settings" subtitle="Manage your admin account" />
 
       <div className="px-8 pb-8 space-y-6 max-w-2xl">
-        {/* Profile section */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="font-semibold text-gray-800 mb-4">Profile</h2>
 
@@ -73,8 +112,8 @@ export default function Settings() {
               </label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
                 className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple"
               />
             </div>
@@ -84,34 +123,29 @@ export default function Settings() {
               </label>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple"
+                value={user.email || ""}
+                disabled
+                className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 text-gray-500"
               />
             </div>
           </div>
 
-          <button className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-pink to-purple text-white text-sm font-medium">
+          {profileMsg && (
+            <p className="text-sm text-green-600 mt-3">{profileMsg}</p>
+          )}
+
+          <button
+            onClick={handleSaveProfile}
+            className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-pink to-purple text-white text-sm font-medium"
+          >
             Save Changes
           </button>
         </div>
 
-        {/* Password section */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="font-semibold text-gray-800 mb-4">Change Password</h2>
 
           <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Current Password
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 New Password
@@ -123,14 +157,37 @@ export default function Settings() {
                 className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple"
+              />
+            </div>
           </div>
 
-          <button className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-pink to-purple text-white text-sm font-medium">
+          {passwordMsg.text && (
+            <p
+              className={`text-sm mt-3 ${
+                passwordMsg.type === "error" ? "text-red-500" : "text-green-600"
+              }`}
+            >
+              {passwordMsg.text}
+            </p>
+          )}
+
+          <button
+            onClick={handleUpdatePassword}
+            className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-pink to-purple text-white text-sm font-medium"
+          >
             Update Password
           </button>
         </div>
 
-        {/* Notifications section */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="font-semibold text-gray-800 mb-4">
             Notification Preferences
@@ -138,19 +195,18 @@ export default function Settings() {
 
           <div className="space-y-4">
             {[
+              { key: "newSalonRequests", label: "New salon requests" },
               { key: "newOrders", label: "New order notifications" },
-              { key: "newSalons", label: "New salon registrations" },
-              { key: "reviews", label: "New review alerts" },
+              { key: "newReviews", label: "New review alerts" },
             ].map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center justify-between"
-              >
+              <div key={item.key} className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">{item.label}</span>
                 <button
                   onClick={() => toggleNotification(item.key)}
                   className={`w-11 h-6 rounded-full relative transition ${
-                    notifications[item.key] ? "bg-gradient-to-r from-pink to-purple" : "bg-gray-200"
+                    notifications[item.key]
+                      ? "bg-gradient-to-r from-pink to-purple"
+                      : "bg-gray-200"
                   }`}
                 >
                   <span

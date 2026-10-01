@@ -1,21 +1,28 @@
+import { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/header.jsx";
-import { useSalons } from "../context/salonscontext.jsx";
+import { fetchSalons, approveSalonInDB, rejectSalonInDB } from "../redux/redux/Slices/SalonsSlice.js";
 import { Check, X, Clock } from "lucide-react";
 
 export default function Requests() {
   const navigate = useNavigate();
-  const { salons, approveSalon, rejectSalon } = useSalons();
+  const salons = useSelector((state) => state.salons.salons);
+  const dispatch = useDispatch();
 
-  const pendingRequests = salons.filter((s) => s.status === "pending");
+  useEffect(() => {
+    dispatch(fetchSalons());
+  }, []);
+
+  const pendingRequests = salons.filter((s) => s.account_status === "Pending");
 
   const handleApprove = (id) => {
-    approveSalon(id);
+    dispatch(approveSalonInDB(id));
     navigate("/dashboard");
   };
 
   const handleReject = (id) => {
-    rejectSalon(id);
+    dispatch(rejectSalonInDB(id));
   };
 
   return (
@@ -42,18 +49,13 @@ export default function Requests() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink to-purple flex items-center justify-center text-white font-semibold">
-                    {salon.ownerName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                    {(salon.name || "S").charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="font-medium text-gray-800">{salon.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {salon.ownerName} · {salon.email}
-                    </p>
+                    <p className="text-sm text-gray-500">{salon.email}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {salon.category} · {salon.address}
+                      {salon.type} · {salon.location}
                     </p>
                   </div>
                 </div>

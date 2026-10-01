@@ -9,26 +9,47 @@ import {
   setRole,
 } from "../redux/redux/Slices/HomeDataSlice.js";
 
-export default function Login() {
+export default function Signup() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [email, setEmail] = useState("chiyou126@gmail.com");
-  const [password, setPassword] = useState("whatthehell1221");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signUp({
       email: email,
       password: password,
+      options: { data: { role: "admin" } },
     });
 
     if (error) {
+      console.log("Signup error:", error);
       setError(error.message);
       return;
+    }
+
+    if (!data.session) {
+      setSuccessMessage(
+        "Signup successful! Please check your email and confirm your account, then log in."
+      );
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("admin").insert({
+      id: data.user.id,
+      name: data.user.email,
+      email: data.user.email,
+    });
+
+    if (insertError) {
+      console.log("Admin table insert error:", insertError);
     }
 
     dispatch(setUser(data.user));
@@ -94,11 +115,17 @@ export default function Login() {
             </p>
           )}
 
+          {successMessage && (
+            <p className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2">
+              {successMessage}
+            </p>
+          )}
+
           <button
             type="submit"
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink to-purple text-white font-medium hover:opacity-90 transition"
           >
-            Sign In to Dashboard
+            Sign Up
           </button>
         </form>
       </div>

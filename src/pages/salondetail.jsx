@@ -1,30 +1,49 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Header from "../components/header.jsx";
 import StatusBadge from "../components/statusbadge.jsx";
-import { salons } from "../data/salons.js";
-import { services } from "../data/services.js";
-import { reviews } from "../data/reviews.js";
+import { getClientName } from "../redux/redux/Slices/AdminDataSlice.js";
 import { ArrowLeft, Star } from "lucide-react";
 
 export default function SalonDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const salon = salons.find((s) => s.id === Number(id));
-  const salonServices = services.filter((s) => s.salonId === Number(id));
-  const salonReviews = reviews.filter((r) => r.salonName === salon?.name);
+  const salons = useSelector((state) => state.salons.salons);
+  const services = useSelector((state) => state.adminData.services);
+  const reviews = useSelector((state) => state.adminData.reviews);
+  const clients = useSelector((state) => state.adminData.clients);
+
+  const salon = salons.find((s) => String(s.id) === String(id));
+  const salonServices = services.filter((s) => String(s.salon_id) === String(id));
+  const salonReviews = reviews.filter((r) => String(r.salon_id) === String(id));
 
   if (!salon) {
     return (
       <div className="p-8">
+        <button
+          onClick={() => navigate("/salons")}
+          className="flex items-center gap-2 text-sm text-gray-500 mb-4"
+        >
+          <ArrowLeft size={16} />
+          Back to Salons
+        </button>
         <p className="text-gray-500">Salon not found.</p>
       </div>
     );
   }
 
+  const avgRating =
+    salonReviews.length > 0
+      ? (
+          salonReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) /
+          salonReviews.length
+        ).toFixed(1)
+      : "—";
+
   return (
     <div>
-      <Header title={salon.name} subtitle={salon.category} />
+      <Header title={salon.name || "Salon"} subtitle={salon.type || ""} />
 
       <div className="px-8 pb-8 space-y-6">
         <button
@@ -35,41 +54,47 @@ export default function SalonDetail() {
           Back to Salons
         </button>
 
-        {/* Salon info card */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
+          {salon.cover_image ? (
+            <img
+              src={salon.cover_image}
+              alt={salon.name}
+              className="w-full h-48 object-cover rounded-xl mb-4"
+            />
+          ) : null}
+
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                {salon.name}
-              </h2>
-              <p className="text-sm text-gray-500">{salon.address}</p>
+              <h2 className="text-lg font-semibold text-gray-800">{salon.name}</h2>
+              <p className="text-sm text-gray-500">{salon.location}</p>
             </div>
-            <StatusBadge status={salon.status} />
+            <StatusBadge status={salon.account_status} />
           </div>
 
+          {salon.description ? (
+            <p className="text-sm text-gray-600 mb-4">{salon.description}</p>
+          ) : null}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-gray-400">Owner</p>
-              <p className="text-gray-800 font-medium">{salon.ownerName}</p>
-            </div>
             <div>
               <p className="text-gray-400">Email</p>
               <p className="text-gray-800 font-medium">{salon.email}</p>
             </div>
             <div>
               <p className="text-gray-400">Phone</p>
-              <p className="text-gray-800 font-medium">{salon.phone}</p>
+              <p className="text-gray-800 font-medium">{salon.phno || "—"}</p>
             </div>
             <div>
-              <p className="text-gray-400">Rating</p>
-              <p className="text-gray-800 font-medium">
-                {salon.rating > 0 ? salon.rating : "—"}
-              </p>
+              <p className="text-gray-400">Province</p>
+              <p className="text-gray-800 font-medium">{salon.province || "—"}</p>
+            </div>
+            <div>
+              <p className="text-gray-400">Avg Rating</p>
+              <p className="text-gray-800 font-medium">{avgRating}</p>
             </div>
           </div>
         </div>
 
-        {/* Services */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h3 className="font-semibold text-gray-800 mb-4">Services</h3>
           {salonServices.length === 0 ? (
@@ -79,19 +104,25 @@ export default function SalonDetail() {
               <thead>
                 <tr className="text-left text-gray-400 border-b border-gray-100">
                   <th className="pb-2 font-medium">Service</th>
-                  <th className="pb-2 font-medium">Junior Price</th>
-                  <th className="pb-2 font-medium">Senior Price</th>
+                  <th className="pb-2 font-medium">Category</th>
+                  <th className="pb-2 font-medium">Duration</th>
+                  <th className="pb-2 font-medium">Price</th>
+                  <th className="pb-2 font-medium">Discount</th>
                 </tr>
               </thead>
               <tbody>
-                {salonServices.map((service) => (
-                  <tr key={service.id} className="border-b border-gray-50">
-                    <td className="py-2 text-gray-800">{service.serviceName}</td>
+                {salonServices.map((s) => (
+                  <tr key={s.id} className="border-b border-gray-50">
+                    <td className="py-2 text-gray-800">{s.name}</td>
+                    <td className="py-2 text-gray-600">{s.category || "—"}</td>
+                    <td className="py-2 text-gray-600">{s.duration || "—"}</td>
                     <td className="py-2 text-gray-600">
-                      Rs {service.juniorPrice.toLocaleString()}
+                      Rs {Number(s.price || 0).toLocaleString()}
                     </td>
                     <td className="py-2 text-gray-600">
-                      Rs {service.seniorPrice.toLocaleString()}
+                      {Number(s.discount_percent || 0) > 0
+                        ? `${s.discount_percent}%`
+                        : "—"}
                     </td>
                   </tr>
                 ))}
@@ -100,7 +131,6 @@ export default function SalonDetail() {
           )}
         </div>
 
-        {/* Reviews */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h3 className="font-semibold text-gray-800 mb-4">Reviews</h3>
           {salonReviews.length === 0 ? (
@@ -111,7 +141,7 @@ export default function SalonDetail() {
                 <div key={review.id} className="border-b border-gray-50 pb-3">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-medium text-gray-800">
-                      {review.clientName}
+                      {getClientName(clients, review.client_id)}
                     </p>
                     <div className="flex items-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
@@ -119,7 +149,7 @@ export default function SalonDetail() {
                           key={i}
                           size={12}
                           className={
-                            i < review.rating
+                            i < Number(review.rating)
                               ? "fill-yellow-400 text-yellow-400"
                               : "text-gray-200"
                           }
@@ -127,7 +157,9 @@ export default function SalonDetail() {
                       ))}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600">{review.comment}</p>
+                  <p className="text-sm text-gray-600">
+                    {review.comment ?? review.review ?? ""}
+                  </p>
                 </div>
               ))}
             </div>
